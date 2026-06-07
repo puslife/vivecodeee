@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Tracker — 공부 기록 대시보드</title>
+
+  <!-- Google Fonts: 제목용 Bodoni Moda + 본문용 Nanum Gothic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,700;1,400&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =====================================================
+       CSS 변수 정의 — 색상과 스타일의 중앙 관리
+    ===================================================== */
+    :root {
+      --bg:        #F7F3EE;        /* 따뜻한 아이보리 배경 */
+      --surface:   #FFFFFF;        /* 카드 배경 */
+      --ink:       #1A1714;        /* 주 텍스트 */
+      --ink-muted: #7A6F66;        /* 보조 텍스트 */
+      --accent:    #C8603A;        /* 포인트 컬러 (테라코타) */
+      --accent-lt: #F0D5C8;        /* 연한 포인트 */
+      --border:    #E2D9D0;        /* 선 색상 */
+      --radius:    12px;
+      --shadow:    0 2px 12px rgba(26,23,20,.08);
+    }
+
+    /* =====================================================
+       리셋 & 기본 설정
+    ===================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nanum Gothic', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* =====================================================
+       헤더
+    ===================================================== */
+    header {
+      background: var(--ink);
+      color: #F7F3EE;
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-family: 'Bodoni Moda', serif;
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      letter-spacing: .02em;
+    }
+
+    header p {
+      margin-top: 4px;
+      font-size: .85rem;
+      color: #B8AFA6;
+    }
+
+    /* =====================================================
+       레이아웃 — 그리드
+    ===================================================== */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      display: grid;
+      gap: 20px;
+      /* 두 열 그리드: 왼쪽 입력 / 오른쪽 통계 */
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "input  stats"
+        "chart  chart"
+        "log    log";
+    }
+
+    /* 모바일: 한 열로 */
+    @media (max-width: 620px) {
+      main {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "input"
+          "stats"
+          "chart"
+          "log";
+      }
+    }
+
+    /* =====================================================
+       카드 공통 스타일
+    ===================================================== */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .card-title {
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* =====================================================
+       입력 폼 카드
+    ===================================================== */
+    #section-input { grid-area: input; }
+
+    .form-group { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--ink-muted);
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .92rem;
+      background: var(--bg);
+      color: var(--ink);
+      transition: border-color .2s;
+      outline: none;
+    }
+
+    input:focus { border-color: var(--accent); }
+
+    /* 저장 버튼 */
+    #btn-save {
+      width: 100%;
+      padding: 11px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background .2s, transform .1s;
+    }
+
+    #btn-save:hover  { background: #a84e2e; }
+    #btn-save:active { transform: scale(.98); }
+
+    /* 에러 메시지 */
+    .error-msg {
+      font-size: .78rem;
+      color: var(--accent);
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    /* =====================================================
+       통계 카드
+    ===================================================== */
+    #section-stats { grid-area: stats; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-box {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 16px 14px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: 'Bodoni Moda', serif;
+      font-size: 2rem;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: .72rem;
+      color: var(--ink-muted);
+      margin-top: 4px;
+    }
+
+    /* =====================================================
+       차트 카드 (Canvas)
+    ===================================================== */
+    #section-chart { grid-area: chart; }
+
+    #bar-chart {
+      width: 100%;
+      height: 180px;
+      display: block;
+    }
+
+    /* =====================================================
+       기록 목록 카드
+    ===================================================== */
+    #section-log { grid-area: log; }
+
+    .log-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 340px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* 스크롤바 커스텀 */
+    .log-list::-webkit-scrollbar { width: 5px; }
+    .log-list::-webkit-scrollbar-track { background: var(--bg); border-radius: 4px; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .log-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg);
+      border-radius: 8px;
+      animation: fadeIn .3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .log-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .log-subject {
+      font-weight: 700;
+      font-size: .9rem;
+    }
+
+    .log-date {
+      font-size: .74rem;
+      color: var(--ink-muted);
+    }
+
+    .log-time {
+      font-family: 'Bodoni Moda', serif;
+      font-size: 1.05rem;
+      color: var(--accent);
+      white-space: nowrap;
+      padding-top: 2px;
+    }
+
+    /* 삭제 버튼 */
+    .btn-delete {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: .7rem;
+      color: var(--ink-muted);
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      flex-shrink: 0;
+    }
+
+    .btn-delete:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* 빈 상태 안내 */
+    .empty-note {
+      text-align: center;
+      color: var(--ink-muted);
+      font-size: .85rem;
+      padding: 24px 0;
+    }
+
+    /* =====================================================
+       토스트 알림
+    ===================================================== */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--ink);
+      color: #F7F3EE;
+      padding: 10px 22px;
+      border-radius: 40px;
+      font-size: .85rem;
+      font-weight: 700;
+      pointer-events: none;
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .35s;
+      opacity: 0;
+      z-index: 999;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<!-- =====================================================
+     헤더
+===================================================== -->
+<header>
+  <h1>Study Tracker</h1>
+  <p>나의 공부 기록을 한눈에 확인하세요</p>
+</header>
+
+<!-- =====================================================
+     메인 콘텐츠
+===================================================== -->
+<main>
+
+  <!-- ① 공부 기록 입력 카드 -->
+  <section class="card" id="section-input">
+    <h2 class="card-title">오늘의 공부 기록</h2>
+
+    <div class="form-group">
+      <label for="input-subject">무엇을 공부했나요?</label>
+      <input type="text" id="input-subject" placeholder="예) 자료구조, 영어 단어, 수학..." maxlength="60" />
+      <p class="error-msg" id="err-subject"></p>
+    </div>
+
+    <div class="form-group">
+      <label for="input-hours">공부 시간 (시간)</label>
+      <input type="number" id="input-hours" placeholder="0.5" min="0.1" max="24" step="0.1" />
+      <p class="error-msg" id="err-hours"></p>
+    </div>
+
+    <button id="btn-save">저장하기</button>
+  </section>
+
+  <!-- ② 통계 카드 -->
+  <section class="card" id="section-stats">
+    <h2 class="card-title">통계</h2>
+    <div class="stat-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="stat-today">0</div>
+        <div class="stat-label">오늘 공부 시간(h)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-week">0</div>
+        <div class="stat-label">이번 주 공부 시간(h)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-count">0</div>
+        <div class="stat-label">오늘 기록 수</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-streak">0</div>
+        <div class="stat-label">연속 공부일</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 막대그래프 카드 -->
+  <section class="card" id="section-chart">
+    <h2 class="card-title">이번 주 요일별 공부 시간</h2>
+    <canvas id="bar-chart" aria-label="요일별 공부 시간 막대그래프"></canvas>
+  </section>
+
+  <!-- ④ 공부 기록 목록 카드 -->
+  <section class="card" id="section-log">
+    <h2 class="card-title">전체 공부 기록</h2>
+    <ul class="log-list" id="log-list">
+      <!-- JavaScript가 동적으로 채움 -->
+    </ul>
+  </section>
+
+</main>
+
+<!-- 토스트 알림 -->
+<div id="toast"></div>
+
+<!-- =====================================================
+     JavaScript — 모든 로직
+===================================================== -->
+<script>
+  /* ==================================================
+     상수 & 상태
+  ================================================== */
+  const STORAGE_KEY = 'study_tracker_v1'; // localStorage 키
+
+  // 앱 상태: 기록 배열을 localStorage에서 불러오거나 빈 배열로 시작
+  let records = loadFromStorage();
+
+  /* ==================================================
+     유틸리티 함수
+  ================================================== */
+
+  // 날짜를 'YYYY-MM-DD' 형식 문자열로 반환
+  function toDateStr(d) {
+    return d.toISOString().slice(0, 10);
+  }
+
+  // 오늘 날짜 문자열
+  function todayStr() {
+    return toDateStr(new Date());
+  }
+
+  // 이번 주 월요일 날짜 문자열 (한국 기준 월~일)
+  function getMondayStr() {
+    const d = new Date();
+    const day = d.getDay(); // 0=일, 1=월 ...
+    const diff = (day === 0 ? -6 : 1 - day); // 월요일까지의 차이
+    d.setDate(d.getDate() + diff);
+    return toDateStr(d);
+  }
+
+  // localStorage 저장
+  function saveToStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  // localStorage 불러오기
+  function loadFromStorage() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  // 숫자를 소수점 1자리로 깔끔하게 표시
+  function fmt(n) {
+    return parseFloat(n.toFixed(1));
+  }
+
+  // 토스트 메시지 표시
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  /* ==================================================
+     저장 로직 — 버튼 클릭 시 실행
+  ================================================== */
+  document.getElementById('btn-save').addEventListener('click', () => {
+    const subjectEl = document.getElementById('input-subject');
+    const hoursEl   = document.getElementById('input-hours');
+    const errSubj   = document.getElementById('err-subject');
+    const errHours  = document.getElementById('err-hours');
+
+    // 에러 초기화
+    errSubj.textContent  = '';
+    errHours.textContent = '';
+
+    const subject = subjectEl.value.trim();
+    const hours   = parseFloat(hoursEl.value);
+
+    // 입력값 검증
+    let valid = true;
+
+    if (!subject) {
+      errSubj.textContent = '공부 내용을 입력해 주세요.';
+      valid = false;
+    }
+
+    if (!hoursEl.value || isNaN(hours) || hours <= 0) {
+      errHours.textContent = '0보다 큰 시간을 입력해 주세요.';
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    // 새 기록 객체 생성
+    const record = {
+      id:      Date.now(),        // 고유 ID (삭제 시 사용)
+      date:    todayStr(),        // 오늘 날짜
+      subject: subject,           // 공부 내용
+      hours:   fmt(hours)         // 공부 시간
+    };
+
+    // 배열 앞에 추가 (최신순)
+    records.unshift(record);
+    saveToStorage();
+
+    // 입력창 초기화
+    subjectEl.value = '';
+    hoursEl.value   = '';
+
+    // UI 업데이트
+    render();
+    showToast('✅ 기록이 저장되었습니다!');
+  });
+
+  /* ==================================================
+     삭제 로직 — 이벤트 위임 방식 (목록에 연결)
+  ================================================== */
+  document.getElementById('log-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-delete');
+    if (!btn) return;
+
+    const id = Number(btn.dataset.id);
+    // id가 일치하지 않는 항목만 남김
+    records = records.filter(r => r.id !== id);
+    saveToStorage();
+    render();
+    showToast('🗑️ 기록을 삭제했습니다.');
+  });
+
+  /* ==================================================
+     통계 계산
+  ================================================== */
+  function calcStats() {
+    const today  = todayStr();
+    const monday = getMondayStr();
+
+    // 오늘 기록
+    const todayRecords = records.filter(r => r.date === today);
+    const todayHours   = todayRecords.reduce((s, r) => s + r.hours, 0);
+
+    // 이번 주 기록 (월요일 이상)
+    const weekHours = records
+      .filter(r => r.date >= monday)
+      .reduce((s, r) => s + r.hours, 0);
+
+    // 연속 공부일 계산
+    const uniqueDates = [...new Set(records.map(r => r.date))].sort().reverse();
+    let streak = 0;
+    const d = new Date();
+    for (let i = 0; i < 365; i++) {
+      const ds = toDateStr(d);
+      if (uniqueDates.includes(ds)) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      } else {
+        // 오늘 기록이 없으면 어제부터 체크
+        if (i === 0) { d.setDate(d.getDate() - 1); continue; }
+        break;
+      }
+    }
+
+    return {
+      todayHours:  fmt(todayHours),
+      weekHours:   fmt(weekHours),
+      todayCount:  todayRecords.length,
+      streak
+    };
+  }
+
+  /* ==================================================
+     요일별 공부 시간 집계 (이번 주 월~일)
+  ================================================== */
+  function getWeeklyData() {
+    const days = ['월', '화', '수', '목', '금', '토', '일'];
+    const monday = new Date();
+    const dow = monday.getDay();
+    monday.setDate(monday.getDate() + (dow === 0 ? -6 : 1 - dow));
+
+    return days.map((label, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const ds = toDateStr(d);
+      const hours = records
+        .filter(r => r.date === ds)
+        .reduce((s, r) => s + r.hours, 0);
+      return { label, hours: fmt(hours), isToday: ds === todayStr() };
+    });
+  }
+
+  /* ==================================================
+     막대그래프 렌더링 (Canvas API)
+  ================================================== */
+  function drawChart() {
+    const canvas = document.getElementById('bar-chart');
+    const ctx    = canvas.getContext('2d');
+
+    // 해상도 선명하게: devicePixelRatio 적용
+    const W = canvas.offsetWidth;
+    const H = canvas.offsetHeight;
+    canvas.width  = W * devicePixelRatio;
+    canvas.height = H * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+
+    const data   = getWeeklyData();
+    const maxVal = Math.max(...data.map(d => d.hours), 1); // 최솟값 1로 나눗셈 방지
+
+    const PAD_T = 16, PAD_B = 36, PAD_L = 10, PAD_R = 10;
+    const chartW = W - PAD_L - PAD_R;
+    const chartH = H - PAD_T - PAD_B;
+
+    const barW   = chartW / data.length;       // 각 열 너비
+    const barPad = barW * 0.22;                // 막대 간격
+
+    // 배경 초기화
+    ctx.clearRect(0, 0, W, H);
+
+    data.forEach((d, i) => {
+      const x      = PAD_L + i * barW;
+      const barH   = (d.hours / maxVal) * chartH;
+      const barX   = x + barPad;
+      const barY   = PAD_T + (chartH - barH);
+      const bWidth = barW - barPad * 2;
+
+      // 막대 색: 오늘은 포인트 컬러, 나머지는 연한 색
+      ctx.fillStyle = d.isToday ? '#C8603A' : '#E2D9D0';
+
+      // 모서리 둥글게 (상단만)
+      const r = Math.min(6, bWidth / 2);
+      ctx.beginPath();
+      ctx.moveTo(barX + r, barY);
+      ctx.lineTo(barX + bWidth - r, barY);
+      ctx.quadraticCurveTo(barX + bWidth, barY, barX + bWidth, barY + r);
+      ctx.lineTo(barX + bWidth, barY + barH);
+      ctx.lineTo(barX, barY + barH);
+      ctx.lineTo(barX, barY + r);
+      ctx.quadraticCurveTo(barX, barY, barX + r, barY);
+      ctx.closePath();
+      ctx.fill();
+
+      // 시간 라벨 (막대 위)
+      if (d.hours > 0) {
+        ctx.fillStyle = d.isToday ? '#C8603A' : '#7A6F66';
+        ctx.font      = `bold ${Math.max(9, barW * 0.22)}px 'Nanum Gothic', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(d.hours + 'h', barX + bWidth / 2, barY - 5);
+      }
+
+      // 요일 라벨 (막대 아래)
+      ctx.fillStyle = d.isToday ? '#C8603A' : '#7A6F66';
+      ctx.font      = `${d.isToday ? 'bold ' : ''}${Math.max(10, barW * 0.22)}px 'Nanum Gothic', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(d.label, barX + bWidth / 2, H - PAD_B + 18);
+    });
+  }
+
+  /* ==================================================
+     기록 목록 렌더링
+  ================================================== */
+  function renderLog() {
+    const list = document.getElementById('log-list');
+    list.innerHTML = '';
+
+    if (records.length === 0) {
+      list.innerHTML = '<li class="empty-note">아직 기록이 없어요.<br>오늘 공부한 내용을 추가해 보세요! 📚</li>';
+      return;
+    }
+
+    records.forEach(r => {
+      // 날짜 포매팅: YYYY-MM-DD → YYYY년 MM월 DD일
+      const [y, m, d] = r.date.split('-');
+      const dateLabel = `${y}년 ${m}월 ${d}일`;
+
+      const li = document.createElement('li');
+      li.className = 'log-item';
+      li.innerHTML = `
+        <div class="log-meta">
+          <span class="log-subject">${r.subject}</span>
+          <span class="log-date">${dateLabel}</span>
+        </div>
+        <span class="log-time">${r.hours}h</span>
+        <button class="btn-delete" data-id="${r.id}" title="삭제">삭제</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  /* ==================================================
+     통계 UI 업데이트
+  ================================================== */
+  function renderStats() {
+    const s = calcStats();
+    document.getElementById('stat-today').textContent  = s.todayHours;
+    document.getElementById('stat-week').textContent   = s.weekHours;
+    document.getElementById('stat-count').textContent  = s.todayCount;
+    document.getElementById('stat-streak').textContent = s.streak;
+  }
+
+  /* ==================================================
+     전체 렌더링 (한 번에 모두 업데이트)
+  ================================================== */
+  function render() {
+    renderStats();
+    renderLog();
+    drawChart();
+  }
+
+  /* ==================================================
+     창 크기 변경 시 차트 다시 그리기
+  ================================================== */
+  window.addEventListener('resize', drawChart);
+
+  /* ==================================================
+     초기 실행
+  ================================================== */
+  render();
+</script>
+
+</body>
+</html>
